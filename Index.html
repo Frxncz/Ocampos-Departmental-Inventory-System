@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+
+  <!-- Load External CSS -->
+  <?!= include('Styles'); ?>
+
+
+</head>
+
+<body>
+
+<div class="container">
+
+  <div id="dashboardView">
+    <h1>Warehouse Department Dashboard</h1>
+
+    <div class="grid">
+    <button onclick="openDepartment('HR')">HR</button>
+    <button onclick="openDepartment('MIS')">MIS</button>
+    <button onclick="openDepartment('MARKETING / CREATIVES')">MARKETING / CREATIVES</button>
+    <button onclick="openDepartment('AUDIT')">AUDIT</button>
+    <button onclick="openDepartment('ADMIN')">ADMIN</button>
+    <button onclick="openDepartment('ACCOUNTING')">ACCOUNTING</button>
+    <button onclick="openDepartment('STOCK MANAGEMENT')">STOCK MANAGEMENT</button>
+    <button onclick="openDepartment('ONLINE')">ONLINE</button>
+    <button onclick="openDepartment('BILLING & COLLECTION')">BILLING & COLLECTION</button>
+    </div>
+
+
+  <div id="departmentView" class="hidden">
+    <button class="back-btn" onclick="goBack()">⬅ Back</button>
+    <div class="header-title" id="departmentTitle"></div>
+    <button class="add-btn" onclick="addItem()">+ Add New Item</button>
+
+    <table>
+      <thead>
+        <tr>
+          <th>ITEM CODE</th>
+          <th>ITEM NAME</th>
+          <th>AVAILABLE</th>
+          <th>UNIT</th>
+          <th>ACTIONS</th>
+        </tr>
+      </thead>
+      <tbody id="itemTable"></tbody>
+    </table>
+  </div>
+
+</div>
+
+<!-- Load External JavaScript -->
+<?!= include('Scripts'); ?>
+
+</body>
+</html>

@@ -1,0 +1,46 @@
+<script>
+  let currentDepartment = "";
+
+  /* Open department view */
+  function openDepartment(name) {
+    currentDepartment = name;
+
+    document.getElementById("dashboardView").classList.add("hidden");
+    document.getElementById("departmentView").classList.remove("hidden");
+    document.getElementById("departmentTitle").innerText = name + " DEPARTMENT";
+
+    google.script.run.withSuccessHandler(displayData).getDepartmentData(name);
+  }
+
+  /* Display data from Sheets */
+  function displayData(data) {
+    const table = document.getElementById("itemTable");
+    table.innerHTML = "";
+
+    data.forEach((row) => {
+      table.innerHTML += `
+      <tr>
+        <td>${row[0]}</td>
+        <td>${row[1]}</td>
+        <td>${row[2]}</td>
+        <td>${row[3]}</td>
+        <td>
+          <button onclick="deleteItem('${row[0]}')">Delete</button>
+        </td>
+      </tr>
+    `;
+    });
+  }
+
+  /* Back button */
+  function goBack() {
+    document.getElementById("departmentView").classList.add("hidden");
+    document.getElementById("dashboardView").classList.remove("hidden");
+  }
+
+  /* Delete item */
+  function deleteItem(code) {
+    google.script.run.deleteItem(currentDepartment, code);
+    openDepartment(currentDepartment);
+  }
+</script>
