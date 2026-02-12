@@ -1,5 +1,5 @@
 function doGet() {
-  return HtmlService.createTemplateFromFile('Index')
+  return HtmlService.createTemplateFromFile('backend/Index')
     .evaluate()
     .setTitle("Warehouse Inventory System");
 }
