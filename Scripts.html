@@ -1,196 +1,229 @@
-  <script>
-    let currentDept = "";
-    let items = [];
-    let filteredItems = [];
-    let editOriginalCode = "";
+<script>
+  let currentDept = "";
+  let items = [];
+  let filteredItems = [];
+  let editOriginalCode = "";
 
-    function statusFromQty(q){ return Number(q) <= 10 ? "LOW" : "OK"; }
+  function statusFromQty(q) {
+    return Number(q) <= 10 ? "LOW" : "OK";
+  }
 
-    // Loading UI helpers
-    function showDeptLoading(show){
-      document.getElementById("deptLoading").style.display = show ? "flex" : "none";
-      document.getElementById("deptGrid").style.display = show ? "none" : "grid";
-    }
-    function showItemsLoading(show){
-      document.getElementById("itemsLoading").style.display = show ? "flex" : "none";
-      document.getElementById("tableWrap").style.display = show ? "none" : "block";
-    }
+  // Loading helpers
+  function showDeptLoading(show) {
+    document.getElementById("deptLoading").style.display = show ? "flex" : "none";
+    document.getElementById("deptGrid").style.display = show ? "none" : "grid";
+  }
 
-    // Start dept loading
-    showDeptLoading(true);
-    google.script.run.withSuccessHandler((depts) => {
+  function showItemsLoading(show) {
+    document.getElementById("itemsLoading").style.display = show ? "flex" : "none";
+    document.getElementById("tableWrap").style.display = show ? "none" : "block";
+  }
+
+  // Load departments
+  showDeptLoading(true);
+  google.script.run
+    .withSuccessHandler((depts) => {
       const grid = document.getElementById("deptGrid");
       grid.innerHTML = "";
-      depts.forEach(d => {
+
+      depts.forEach((d) => {
         const b = document.createElement("button");
         b.className = "deptBtn";
         b.textContent = d;
         b.onclick = () => openDept(d);
         grid.appendChild(b);
       });
+
       showDeptLoading(false);
-    }).getDepartments();
+    })
+    .getDepartments();
 
-    function openDept(dept){
-      currentDept = dept;
-      document.getElementById("deptTitle").textContent = dept;
-      document.getElementById("viewDepartments").style.display = "none";
-      document.getElementById("viewInventory").style.display = "block";
-      document.getElementById("searchInput").value = "";
-      refreshItems();
-    }
+  function openDept(dept) {
+    currentDept = dept;
+    document.getElementById("deptTitle").textContent = dept;
+    document.getElementById("viewDepartments").style.display = "none";
+    document.getElementById("viewInventory").style.display = "block";
+    document.getElementById("searchInput").value = "";
+    refreshItems();
+  }
 
-    function goBack(){
-      document.getElementById("viewInventory").style.display = "none";
-      document.getElementById("viewDepartments").style.display = "block";
-      currentDept = "";
-      items = [];
-      filteredItems = [];
-    }
+  function goBack() {
+    document.getElementById("viewInventory").style.display = "none";
+    document.getElementById("viewDepartments").style.display = "block";
+    currentDept = "";
+    items = [];
+    filteredItems = [];
+  }
 
-    function refreshItems(){
-      showItemsLoading(true);
-      google.script.run.withSuccessHandler((res) => {
+  function refreshItems() {
+    showItemsLoading(true);
+
+    google.script.run
+      .withSuccessHandler((res) => {
         items = res || [];
         filteredItems = items.slice();
         render();
         showItemsLoading(false);
-      }).getDepartmentItems(currentDept);
-    }
+      })
+      .getDepartmentItems(currentDept);
+  }
 
-    function applySearch(){
-      const q = document.getElementById("searchInput").value.trim().toLowerCase();
-      if(!q){
-        filteredItems = items.slice();
-      } else {
-        filteredItems = items.filter(it => {
-          return (String(it.code||"").toLowerCase().includes(q) ||
-                  String(it.name||"").toLowerCase().includes(q) ||
-                  String(it.category||"").toLowerCase().includes(q));
-        });
-      }
-      render();
-    }
+  function applySearch() {
+    const q = document.getElementById("searchInput").value.trim().toLowerCase();
 
-    function clearSearch(){
-      document.getElementById("searchInput").value = "";
+    if (!q) {
       filteredItems = items.slice();
-      render();
+    } else {
+      filteredItems = items.filter((it) =>
+        String(it.code || "").toLowerCase().includes(q) ||
+        String(it.name || "").toLowerCase().includes(q) ||
+        String(it.category || "").toLowerCase().includes(q)
+      );
     }
 
-    function render(){
-      const body = document.getElementById("invBody");
-      body.innerHTML = "";
+    render();
+  }
 
-      filteredItems.forEach(it => {
-        const tr = document.createElement("tr");
-        const stat = statusFromQty(it.stock);
-        if (stat === "LOW") tr.classList.add("low");
+  function clearSearch() {
+    document.getElementById("searchInput").value = "";
+    filteredItems = items.slice();
+    render();
+  }
 
-        const img = (it.image && String(it.image).trim())
+  function render() {
+    const body = document.getElementById("invBody");
+    body.innerHTML = "";
+
+    filteredItems.forEach((it) => {
+      const tr = document.createElement("tr");
+      const stat = statusFromQty(it.stock);
+
+      if (stat === "LOW") tr.classList.add("low");
+
+      const img =
+        it.image && String(it.image).trim()
           ? `<img src="${escapeHtml(it.image)}" onerror="this.src='https://via.placeholder.com/50'">`
           : `<img src="https://via.placeholder.com/50">`;
 
-        tr.innerHTML = `
-          <td>${escapeHtml(it.code)}</td>
-          <td>${escapeHtml(it.name)}</td>
-          <td>${escapeHtml(it.category)}</td>
-          <td>${Number(it.stock)}</td>
-          <td>${img}</td>
-          <td>
-            <button class="actBtn editBtn" onclick="openEdit('${jsStr(it.code)}')">Edit</button>
-            <button class="actBtn delBtn" onclick="del('${jsStr(it.code)}')">Delete</button>
-          </td>
-        `;
-        body.appendChild(tr);
-      });
-    }
+      tr.innerHTML = `
+        <td>${escapeHtml(it.code)}</td>
+        <td>${escapeHtml(it.name)}</td>
+        <td>${escapeHtml(it.category)}</td>
+        <td>${Number(it.stock)}</td>
+        <td>${img}</td>
+        <td>
+          <button class="actBtn editBtn" onclick="openEdit('${jsStr(it.code)}')">Edit</button>
+          <button class="actBtn delBtn" onclick="del('${jsStr(it.code)}')">Delete</button>
+        </td>
+      `;
 
-    // EDIT
-    function openEdit(code){
-      const it = items.find(x => x.code === code);
-      if(!it) return;
-      editOriginalCode = it.code;
+      body.appendChild(tr);
+    });
+  }
 
-      document.getElementById("e_code").value = it.code || "";
-      document.getElementById("e_name").value = it.name || "";
-      document.getElementById("e_category").value = it.category || "";
-      document.getElementById("e_qty").value = it.stock ?? 0;
-      document.getElementById("e_image").value = it.image || "";
+  // EDIT
+  function openEdit(code) {
+    const it = items.find((x) => x.code === code);
+    if (!it) return;
 
-      document.getElementById("editOverlay").style.display = "flex";
-    }
-    function closeEdit(){ document.getElementById("editOverlay").style.display = "none"; }
-    function removeImageEdit(){ document.getElementById("e_image").value = ""; }
+    editOriginalCode = it.code;
 
-    function saveEdit(){
-      const payload = {
-        originalCode: editOriginalCode,
-        name: document.getElementById("e_name").value.trim(),
-        category: document.getElementById("e_category").value.trim(),
-        stock: Number(document.getElementById("e_qty").value || 0),
-        image: document.getElementById("e_image").value.trim(),
-        department: currentDept
-      };
+    document.getElementById("e_code").value = it.code || "";
+    document.getElementById("e_name").value = it.name || "";
+    document.getElementById("e_category").value = it.category || "";
+    document.getElementById("e_qty").value = it.stock ?? 0;
+    document.getElementById("e_image").value = it.image || "";
 
-      google.script.run
-        .withSuccessHandler(() => { closeEdit(); refreshItems(); })
-        .withFailureHandler(err => alert(err.message))
-        .updateItem(payload);
-    }
+    document.getElementById("editOverlay").style.display = "flex";
+  }
 
-    // DELETE
-    function del(code){
-      if(!confirm("Delete this item?")) return;
-      google.script.run
-        .withSuccessHandler(() => refreshItems())
-        .withFailureHandler(err => alert(err.message))
-        .deleteItem(code);
-    }
+  function closeEdit() {
+    document.getElementById("editOverlay").style.display = "none";
+  }
 
-    // ADD
-    function openAdd(){
-      document.getElementById("a_name").value = "";
-      document.getElementById("a_category").value = "";
-      document.getElementById("a_qty").value = 0;
-      document.getElementById("a_image").value = "";
-      document.getElementById("addOverlay").style.display = "flex";
-    }
-    function closeAdd(){ document.getElementById("addOverlay").style.display = "none"; }
+  function removeImageEdit() {
+    document.getElementById("e_image").value = "";
+  }
 
-    function saveAdd(){
-      const payload = {
-        name: document.getElementById("a_name").value.trim(),
-        category: document.getElementById("a_category").value.trim(),
-        department: currentDept,
-        stock: Number(document.getElementById("a_qty").value || 0),
-        image: document.getElementById("a_image").value.trim()
-      };
+  function saveEdit() {
+    const payload = {
+      originalCode: editOriginalCode,
+      name: document.getElementById("e_name").value.trim(),
+      category: document.getElementById("e_category").value.trim(),
+      stock: Number(document.getElementById("e_qty").value || 0),
+      image: document.getElementById("e_image").value.trim(),
+      department: currentDept
+    };
 
-      google.script.run
-        .withSuccessHandler((res) => {
-          closeAdd();
-          refreshItems();
-          if(res && res.code){
-            alert("Item Added! Auto Code: " + res.code);
-          } else {
-            alert("Item Added!");
-          }
-        })
-        .withFailureHandler(err => alert(err.message))
-        .addItem(payload);
-    }
+    google.script.run
+      .withSuccessHandler(() => {
+        closeEdit();
+        refreshItems();
+      })
+      .withFailureHandler((err) => alert(err.message))
+      .updateItem(payload);
+  }
 
-    // Helpers
-    function escapeHtml(s){
-      return String(s ?? "")
-        .replaceAll("&","&amp;")
-        .replaceAll("<","&lt;")
-        .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
-        .replaceAll("'","&#39;");
-    }
-    function jsStr(s){
-      return String(s ?? "").replaceAll("\\","\\\\").replaceAll("'","\\'");
-    }
-  </script>
+  // DELETE
+  function del(code) {
+    if (!confirm("Delete this item?")) return;
+
+    google.script.run
+      .withSuccessHandler(() => refreshItems())
+      .withFailureHandler((err) => alert(err.message))
+      .deleteItem(code);
+  }
+
+  // ADD
+  function openAdd() {
+    document.getElementById("a_name").value = "";
+    document.getElementById("a_category").value = "";
+    document.getElementById("a_qty").value = 0;
+    document.getElementById("a_image").value = "";
+    document.getElementById("addOverlay").style.display = "flex";
+  }
+
+  function closeAdd() {
+    document.getElementById("addOverlay").style.display = "none";
+  }
+
+  function saveAdd() {
+    const payload = {
+      name: document.getElementById("a_name").value.trim(),
+      category: document.getElementById("a_category").value.trim(),
+      department: currentDept,
+      stock: Number(document.getElementById("a_qty").value || 0),
+      image: document.getElementById("a_image").value.trim()
+    };
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        closeAdd();
+        refreshItems();
+
+        if (res && res.code) {
+          alert("Item Added! Auto Code: " + res.code);
+        } else {
+          alert("Item Added!");
+        }
+      })
+      .withFailureHandler((err) => alert(err.message))
+      .addItem(payload);
+  }
+
+  // Helpers
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function jsStr(s) {
+    return String(s ?? "")
+      .replaceAll("\\", "\\\\")
+      .replaceAll("'", "\\'");
+  }
+</script>
