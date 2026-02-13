@@ -45,8 +45,6 @@ function getDepartmentItems(department) {
       category: r[2],
       department: r[3],
       stock: Number(r[4] || 0),
-      unit: r[5],
-      status: r[6],
       image: r[7]
     }));
 }
@@ -114,7 +112,6 @@ function addItem(data) {
 
   return { success: true, code };
 }
-
 
 
 

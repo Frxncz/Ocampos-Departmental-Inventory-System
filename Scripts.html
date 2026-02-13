@@ -10,7 +10,6 @@
   function show(el, isShown){ el.style.display = isShown ? "block" : "none"; }
   function showFlex(el, isShown){ el.style.display = isShown ? "flex" : "none"; }
 
-  function statusFromQty(q){ return Number(q) <= LOW_STOCK_THRESHOLD ? "LOW" : "OK"; }
 
   function escapeHtml(s){
     return String(s ?? "")
@@ -81,6 +80,7 @@
 
     google.script.run
       .withSuccessHandler((res) => {
+        console.log("Items returned:", res);
         items = res || [];
         renderItems();
       })
@@ -88,41 +88,51 @@
       .getDepartmentItems(currentDept);
   }
 
+
   function renderItems(){
     const body = $("invBody");
     body.innerHTML = "";
 
-    items.forEach(it => {
-      const tr = document.createElement("tr");
-      const stat = statusFromQty(it.stock);
-      if (stat === "LOW") tr.classList.add("low");
+    try {
+      if (!Array.isArray(items) || items.length === 0) {
+        body.innerHTML = `<tr><td colspan="6" style="padding:14px;">No items found.</td></tr>`;
+        return;
+      }
 
-      const img = (it.image && String(it.image).trim())
-        ? `<img src="${escapeHtml(it.image)}" onerror="this.src='https://via.placeholder.com/50'">`
-        : `<img src="https://via.placeholder.com/50">`;
+      items.forEach(it => {
+        const tr = document.createElement("tr");
 
-      tr.innerHTML = `
-        <td>${escapeHtml(it.code)}</td>
-        <td>${escapeHtml(it.name)}</td>
-        <td>${escapeHtml(it.category)}</td>
-        <td>${Number(it.stock)}</td>
-        <td>${escapeHtml(it.unit || "")}</td>
-        <td><b>${stat}</b></td>
-        <td>${img}</td>
-        <td>
-          <button class="actBtn editBtn" data-edit="${escapeHtml(it.code)}">Edit</button>
-          <button class="actBtn delBtn" data-del="${escapeHtml(it.code)}">Delete</button>
-        </td>
-      `;
-      body.appendChild(tr);
-    });
+        const img = (it.image && String(it.image).trim())
+          ? `<img src="${escapeHtml(it.image)}" onerror="this.src='https://via.placeholder.com/50'">`
+          : `<img src="https://via.placeholder.com/50">`;
 
-    body.onclick = (e) => {
-      const editCode = e.target?.dataset?.edit;
-      const delCode  = e.target?.dataset?.del;
-      if (editCode) openEdit(editCode);
-      if (delCode) del(delCode);
-    };
+        tr.innerHTML = `
+          <td>${escapeHtml(it.code)}</td>
+          <td>${escapeHtml(it.name)}</td>
+          <td>${escapeHtml(it.category)}</td>
+          <td>${Number(it.stock)}</td>
+          <td>${img}</td>
+          <td>
+            <button class="actBtn editBtn" data-edit="${escapeHtml(it.code)}">Edit</button>
+            <button class="actBtn delBtn" data-del="${escapeHtml(it.code)}">Delete</button>
+          </td>
+        `;
+
+        body.appendChild(tr);
+      });
+
+      // Event delegation for Edit/Delete
+      body.onclick = (e) => {
+        const editCode = e.target?.dataset?.edit;
+        const delCode  = e.target?.dataset?.del;
+        if (editCode) openEdit(editCode);
+        if (delCode) del(delCode);
+      };
+
+    } catch (err) {
+      console.error("renderItems error:", err);
+      alert("renderItems error: " + (err?.message || err));
+    }
   }
 
   // EDIT
