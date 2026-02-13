@@ -51,36 +51,59 @@ function getDepartmentItems(department) {
     }));
 }
 
+/*************** AUTO CODE GENERATOR ***************/
+function generateNextItemCode_(sh) {
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return "ITM-0001";
+
+  const codes = sh.getRange(2, 1, lastRow - 1, 1)
+    .getValues()
+    .flat()
+    .filter(Boolean);
+
+  if (!codes.length) return "ITM-0001";
+
+  const numbers = codes.map(c => {
+    const match = String(c).match(/ITM-(\d+)/);
+    return match ? Number(match[1]) : 0;
+  });
+
+  const max = Math.max(...numbers);
+  const next = max + 1;
+
+  return "ITM-" + String(next).padStart(4, "0");
+}
+
+
 /*************** CREATE ***************/
 function addItem(data) {
   const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
   const sh = ss.getSheetByName(SHEET_ITEMS);
   if (!sh) throw new Error("Missing sheet: " + SHEET_ITEMS);
 
-  const code = String(data.code || "").trim();
+  // 🔥 AUTO GENERATE CODE
+  const code = generateNextItemCode_(sh);
+
   const name = String(data.name || "").trim();
   const category = String(data.category || "").trim();
   const department = String(data.department || "").trim();
   const image = String(data.image || "").trim();
   const stock = Number(data.stock || 0);
 
-  const unit = ""; // unit removed in Add
+  const unit = "";
 
-  if (!code || !name || !department) {
-    throw new Error("Required: Item Code, Item Name, Department");
-  }
-
-  const lastRow = sh.getLastRow();
-  if (lastRow >= 2) {
-    const codes = sh.getRange(2, 1, lastRow - 1, 1)
-      .getValues().flat().map(v => String(v).trim());
-    if (codes.includes(code)) throw new Error("Item Code already exists. Use a unique code.");
+  if (!name || !department) {
+    throw new Error("Required: Item Name, Department");
   }
 
   const status = stock <= LOW_STOCK_THRESHOLD ? "LOW" : "OK";
+
   sh.appendRow([code, name, category, department, stock, unit, status, image]);
+
   return { success: true };
 }
+
+
 
 /*************** UPDATE ***************/
 function updateItem(data) {

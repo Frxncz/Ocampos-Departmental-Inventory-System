@@ -184,13 +184,13 @@
 
   function saveAdd(){
     const payload = {
-      code: $("a_code").value.trim(),
       name: $("a_name").value.trim(),
       category: $("a_category").value.trim(),
       department: currentDept,
       stock: Number($("a_qty").value || 0),
       image: $("a_image").value.trim()
     };
+
 
     google.script.run
       .withSuccessHandler(() => { closeAdd(); refreshItems(); })
