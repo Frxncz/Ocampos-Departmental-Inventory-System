@@ -52,27 +52,40 @@ function getDepartmentItems(department) {
 }
 
 /*************** AUTO CODE GENERATOR ***************/
-function generateNextItemCode_(sh) {
-  const lastRow = sh.getLastRow();
-  if (lastRow < 2) return "ITM-0001";
-
-  const codes = sh.getRange(2, 1, lastRow - 1, 1)
-    .getValues()
-    .flat()
-    .filter(Boolean);
-
-  if (!codes.length) return "ITM-0001";
-
-  const numbers = codes.map(c => {
-    const match = String(c).match(/ITM-(\d+)/);
-    return match ? Number(match[1]) : 0;
-  });
-
-  const max = Math.max(...numbers);
-  const next = max + 1;
-
-  return "ITM-" + String(next).padStart(4, "0");
+function deptPrefix_(department) {
+  // Turn "Billing and Collection" -> "BILLINGANDCOLLECTION"
+  // Turn "Marketing/Creative" -> "MARKETINGCREATIVE"
+  return String(department || "")
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, ""); // remove spaces/symbols
 }
+
+function generateNextDeptItemCode_(sh, department) {
+  const prefix = deptPrefix_(department);
+  if (!prefix) throw new Error("Invalid department for code generation.");
+
+  const lastRow = sh.getLastRow();
+  if (lastRow < 2) return `${prefix}-0001`;
+
+  const codes = sh.getRange(2, 1, lastRow - 1, 1).getValues().flat();
+
+  // Only codes that start with "PREFIX-"
+  const re = new RegExp("^" + prefix + "-(\\d+)$");
+
+  let maxNum = 0;
+  for (const c of codes) {
+    const m = re.exec(String(c || "").trim().toUpperCase());
+    if (m) {
+      const n = Number(m[1]);
+      if (n > maxNum) maxNum = n;
+    }
+  }
+
+  const next = maxNum + 1;
+  return `${prefix}-${String(next).padStart(4, "0")}`;
+}
+
 
 
 /*************** CREATE ***************/
@@ -81,27 +94,27 @@ function addItem(data) {
   const sh = ss.getSheetByName(SHEET_ITEMS);
   if (!sh) throw new Error("Missing sheet: " + SHEET_ITEMS);
 
-  // 🔥 AUTO GENERATE CODE
-  const code = generateNextItemCode_(sh);
-
   const name = String(data.name || "").trim();
   const category = String(data.category || "").trim();
   const department = String(data.department || "").trim();
   const image = String(data.image || "").trim();
   const stock = Number(data.stock || 0);
 
-  const unit = "";
+  const unit = ""; // still blank on Add
 
   if (!name || !department) {
     throw new Error("Required: Item Name, Department");
   }
 
-  const status = stock <= LOW_STOCK_THRESHOLD ? "LOW" : "OK";
+  // ✅ AUTO CODE per department
+  const code = generateNextDeptItemCode_(sh, department);
 
+  const status = stock <= LOW_STOCK_THRESHOLD ? "LOW" : "OK";
   sh.appendRow([code, name, category, department, stock, unit, status, image]);
 
-  return { success: true };
+  return { success: true, code };
 }
+
 
 
 

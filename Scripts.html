@@ -173,7 +173,6 @@
 
   // ADD
   function openAdd(){
-    $("a_code").value = "";
     $("a_name").value = "";
     $("a_category").value = "";
     $("a_qty").value = 0;
@@ -191,12 +190,17 @@
       image: $("a_image").value.trim()
     };
 
-
     google.script.run
-      .withSuccessHandler(() => { closeAdd(); refreshItems(); })
+      .withSuccessHandler((res) => {
+        closeAdd();
+        refreshItems();
+        // optional: show the generated code
+        if (res?.code) alert("Item added! Generated Code: " + res.code);
+      })
       .withFailureHandler(err => alert(err?.message || err))
       .addItem(payload);
   }
+
 
   // Wire up
   document.addEventListener("DOMContentLoaded", () => {
