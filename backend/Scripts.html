@@ -1,47 +1,95 @@
 <script>
+  const LOW_STOCK_THRESHOLD = 10;
+
   let currentDept = "";
   let items = [];
   let editOriginalCode = "";
 
-  function statusFromQty(q){ return Number(q) <= 10 ? "LOW" : "OK"; }
+  const $ = (id) => document.getElementById(id);
 
-  // Departments Buttons
-  google.script.run.withSuccessHandler((depts) => {
-    const grid = document.getElementById("deptGrid");
+  function show(el, isShown){ el.style.display = isShown ? "block" : "none"; }
+  function showFlex(el, isShown){ el.style.display = isShown ? "flex" : "none"; }
+
+  function statusFromQty(q){ return Number(q) <= LOW_STOCK_THRESHOLD ? "LOW" : "OK"; }
+
+  function escapeHtml(s){
+    return String(s ?? "")
+      .replaceAll("&","&amp;")
+      .replaceAll("<","&lt;")
+      .replaceAll(">","&gt;")
+      .replaceAll('"',"&quot;")
+      .replaceAll("'","&#39;");
+  }
+
+  // ---- LOAD DEPARTMENTS (this is what creates the buttons) ----
+  function loadDepartments(){
+    $("deptHint").textContent = "Loading departments...";
+
+    google.script.run
+      .withSuccessHandler((depts) => {
+        renderDepartments(depts || []);
+      })
+      .withFailureHandler((err) => {
+        // THIS will tell you the real reason buttons are not showing
+        alert("Failed to load departments: " + (err?.message || err));
+        $("deptHint").textContent = "Failed to load departments. Check sheet name and permissions.";
+      })
+      .getDepartments();
+  }
+
+  function renderDepartments(depts){
+    const grid = $("deptGrid");
     grid.innerHTML = "";
+
+    if (!depts.length) {
+      $("deptHint").textContent =
+        "No departments found. Put department names in the DEPARTMENTS sheet column A starting at A2.";
+      return;
+    }
+
+    $("deptHint").textContent = "";
+
     depts.forEach(d => {
       const b = document.createElement("button");
       b.className = "deptBtn";
       b.textContent = d;
-      b.onclick = () => openDept(d);
+      b.addEventListener("click", () => openDept(d));
       grid.appendChild(b);
     });
-  }).getDepartments();
+  }
 
   function openDept(dept){
     currentDept = dept;
-    document.getElementById("deptTitle").textContent = dept;
-    document.getElementById("viewDepartments").style.display = "none";
-    document.getElementById("viewInventory").style.display = "block";
+    $("deptTitle").textContent = dept;
+
+    show($("viewDepartments"), false);
+    show($("viewInventory"), true);
+
     refreshItems();
   }
 
   function goBack(){
-    document.getElementById("viewInventory").style.display = "none";
-    document.getElementById("viewDepartments").style.display = "block";
+    show($("viewInventory"), false);
+    show($("viewDepartments"), true);
     currentDept = "";
     items = [];
+    $("invBody").innerHTML = "";
   }
 
   function refreshItems(){
-    google.script.run.withSuccessHandler((res) => {
-      items = res || [];
-      render();
-    }).getDepartmentItems(currentDept);
+    if(!currentDept) return;
+
+    google.script.run
+      .withSuccessHandler((res) => {
+        items = res || [];
+        renderItems();
+      })
+      .withFailureHandler(err => alert("Failed to load items: " + (err?.message || err)))
+      .getDepartmentItems(currentDept);
   }
 
-  function render(){
-    const body = document.getElementById("invBody");
+  function renderItems(){
+    const body = $("invBody");
     body.innerHTML = "";
 
     items.forEach(it => {
@@ -58,16 +106,23 @@
         <td>${escapeHtml(it.name)}</td>
         <td>${escapeHtml(it.category)}</td>
         <td>${Number(it.stock)}</td>
-        <td>${escapeHtml(it.unit)}</td>
+        <td>${escapeHtml(it.unit || "")}</td>
         <td><b>${stat}</b></td>
         <td>${img}</td>
         <td>
-          <button class="actBtn editBtn" onclick="openEdit('${jsStr(it.code)}')">Edit</button>
-          <button class="actBtn delBtn" onclick="del('${jsStr(it.code)}')">Delete</button>
+          <button class="actBtn editBtn" data-edit="${escapeHtml(it.code)}">Edit</button>
+          <button class="actBtn delBtn" data-del="${escapeHtml(it.code)}">Delete</button>
         </td>
       `;
       body.appendChild(tr);
     });
+
+    body.onclick = (e) => {
+      const editCode = e.target?.dataset?.edit;
+      const delCode  = e.target?.dataset?.del;
+      if (editCode) openEdit(editCode);
+      if (delCode) del(delCode);
+    };
   }
 
   // EDIT
@@ -76,84 +131,85 @@
     if(!it) return;
     editOriginalCode = it.code;
 
-    document.getElementById("e_code").value = it.code || "";
-    document.getElementById("e_name").value = it.name || "";
-    document.getElementById("e_category").value = it.category || "";
-    document.getElementById("e_qty").value = it.stock ?? 0;
-    document.getElementById("e_unit").value = it.unit || "";
-    document.getElementById("e_image").value = it.image || "";
+    $("e_code").value = it.code || "";
+    $("e_name").value = it.name || "";
+    $("e_category").value = it.category || "";
+    $("e_qty").value = it.stock ?? 0;
+    $("e_unit").value = it.unit || "";
+    $("e_image").value = it.image || "";
 
-    document.getElementById("editOverlay").style.display = "flex";
+    showFlex($("editOverlay"), true);
   }
-  function closeEdit(){ document.getElementById("editOverlay").style.display = "none"; }
-  function removeImageEdit(){ document.getElementById("e_image").value = ""; }
+  function closeEdit(){ showFlex($("editOverlay"), false); }
+  function removeImageEdit(){ $("e_image").value = ""; }
 
   function saveEdit(){
     const payload = {
       originalCode: editOriginalCode,
-      code: document.getElementById("e_code").value.trim(),
-      name: document.getElementById("e_name").value.trim(),
-      category: document.getElementById("e_category").value.trim(),
-      stock: Number(document.getElementById("e_qty").value || 0),
-      unit: document.getElementById("e_unit").value.trim(),
-      image: document.getElementById("e_image").value.trim(),
+      code: $("e_code").value.trim(),
+      name: $("e_name").value.trim(),
+      category: $("e_category").value.trim(),
+      stock: Number($("e_qty").value || 0),
+      unit: $("e_unit").value.trim(),
+      image: $("e_image").value.trim(),
       department: currentDept
     };
 
     google.script.run
       .withSuccessHandler(() => { closeEdit(); refreshItems(); })
-      .withFailureHandler(err => alert(err.message))
+      .withFailureHandler(err => alert(err?.message || err))
       .updateItem(payload);
   }
 
   // DELETE
   function del(code){
     if(!confirm("Delete this item?")) return;
+
     google.script.run
       .withSuccessHandler(() => refreshItems())
-      .withFailureHandler(err => alert(err.message))
+      .withFailureHandler(err => alert(err?.message || err))
       .deleteItem(code);
   }
 
   // ADD
   function openAdd(){
-    document.getElementById("a_code").value = "";
-    document.getElementById("a_name").value = "";
-    document.getElementById("a_category").value = "";
-    document.getElementById("a_qty").value = 0;
-    document.getElementById("a_unit").value = "";
-    document.getElementById("a_image").value = "";
-    document.getElementById("addOverlay").style.display = "flex";
+    $("a_code").value = "";
+    $("a_name").value = "";
+    $("a_category").value = "";
+    $("a_qty").value = 0;
+    $("a_image").value = "";
+    showFlex($("addOverlay"), true);
   }
-  function closeAdd(){ document.getElementById("addOverlay").style.display = "none"; }
+  function closeAdd(){ showFlex($("addOverlay"), false); }
 
   function saveAdd(){
     const payload = {
-      code: document.getElementById("a_code").value.trim(),
-      name: document.getElementById("a_name").value.trim(),
-      category: document.getElementById("a_category").value.trim(),
+      code: $("a_code").value.trim(),
+      name: $("a_name").value.trim(),
+      category: $("a_category").value.trim(),
       department: currentDept,
-      stock: Number(document.getElementById("a_qty").value || 0),
-      unit: document.getElementById("a_unit").value.trim(),
-      image: document.getElementById("a_image").value.trim()
+      stock: Number($("a_qty").value || 0),
+      image: $("a_image").value.trim()
     };
 
     google.script.run
       .withSuccessHandler(() => { closeAdd(); refreshItems(); })
-      .withFailureHandler(err => alert(err.message))
+      .withFailureHandler(err => alert(err?.message || err))
       .addItem(payload);
   }
 
-  // Helpers
-  function escapeHtml(s){
-    return String(s ?? "")
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#39;");
-  }
-  function jsStr(s){
-    return String(s ?? "").replaceAll("\\","\\\\").replaceAll("'","\\'");
-  }
+  // Wire up
+  document.addEventListener("DOMContentLoaded", () => {
+    $("btnAdd").addEventListener("click", openAdd);
+    $("btnBack").addEventListener("click", goBack);
+
+    $("btnEditCancel").addEventListener("click", closeEdit);
+    $("btnEditRemoveImg").addEventListener("click", removeImageEdit);
+    $("btnEditSave").addEventListener("click", saveEdit);
+
+    $("btnAddCancel").addEventListener("click", closeAdd);
+    $("btnAddSave").addEventListener("click", saveAdd);
+
+    loadDepartments();
+  });
 </script>

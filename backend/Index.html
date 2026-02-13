@@ -3,57 +3,59 @@
 <head>
   <base target="_top" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <?!= include('backend/Styles'); ?>
+  <?!= include("backend/Styles"); ?>
 </head>
 
 <body>
   <div class="shell">
     <div class="panel">
       <div class="header">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path d="M7 7.5 12 4l5 3.5v9L12 20l-5-3.5v-9Z" stroke="white" stroke-width="2" />
-            <path d="M12 4v16" stroke="white" stroke-width="2" opacity=".7"/>
-          </svg>
+        <div class="logoWrapper">
+          <img src="https://i.imgur.com/6tgDsdR.png" class="mainLogo" alt="Ocampos Logo">
         </div>
-        <h1 class="title">Ocampo's Warehouse Department Catalog</h1>
+        <h1 class="title">Warehouse Department Catalog</h1>
         <p class="sub">Select a department to manage inventory</p>
       </div>
 
       <div class="content">
-        <!-- VIEW 1 -->
-        <div id="viewDepartments">
-          <div class="deptGrid" id="deptGrid"></div>
-        </div>
+        <div class="contentInner">
 
-        <!-- VIEW 2 -->
-        <div id="viewInventory" style="display:none;">
-          <div class="topBar">
-            <div class="crumb">
-              <h3 id="deptTitle">Department</h3>
-              <p>Auto Status: qty ≤ 10 = LOW, qty > 10 = OK</p>
-            </div>
-            <div>
-              <button class="primaryTop" onclick="openAdd()">+ Add Item</button>
-              <button class="backBtn" onclick="goBack()">← Back</button>
-            </div>
+          <!-- Department selector -->
+          <div id="viewDepartments">
+            <div class="deptGrid" id="deptGrid"></div>
+            <p class="hint" id="deptHint" style="margin-top:12px;"></p>
           </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Item Code</th>
-                <th>Item Name</th>
-                <th>Category</th>
-                <th>Qty</th>
-                <th>Unit</th>
-                <th>Status</th>
-                <th>Image</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="invBody"></tbody>
-          </table>
+          <!-- Inventory -->
+          <div id="viewInventory" style="display:none;">
+            <div class="topBar">
+              <div class="crumb">
+                <h3 id="deptTitle">Department</h3>
+                <p>Auto Status: qty ≤ 10 = LOW, qty > 10 = OK</p>
+              </div>
+              <div class="actionsTop">
+                <button class="primaryTop" id="btnAdd">+ Add Item</button>
+                <button class="backBtn" id="btnBack">← Back</button>
+              </div>
+            </div>
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Item Code</th>
+                  <th>Item Name</th>
+                  <th>Category</th>
+                  <th>Qty</th>
+                  <th>Unit</th>
+                  <th>Status</th>
+                  <th>Image</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="invBody"></tbody>
+            </table>
+          </div>
+
         </div>
       </div>
     </div>
@@ -73,9 +75,9 @@
       </div>
       <p class="hint">To remove image: click “Remove Image”.</p>
       <div class="modalRow">
-        <button class="actBtn ghost" onclick="closeEdit()">Cancel</button>
-        <button class="actBtn danger" onclick="removeImageEdit()">Remove Image</button>
-        <button class="actBtn primary" onclick="saveEdit()">Save</button>
+        <button class="actBtn ghost" id="btnEditCancel">Cancel</button>
+        <button class="actBtn danger" id="btnEditRemoveImg">Remove Image</button>
+        <button class="actBtn primary" id="btnEditSave">Save</button>
       </div>
     </div>
   </div>
@@ -89,17 +91,16 @@
         <input id="a_name" placeholder="Item Name" />
         <input id="a_category" placeholder="Category" />
         <input id="a_qty" type="number" placeholder="Quantity" />
-        <input id="a_unit" placeholder="Unit" />
         <input id="a_image" placeholder="Image URL (direct public link)" />
       </div>
-      <p class="hint">Use direct image URL (example: https://i.imgur.com/xxxx.jpg)</p>
+      <p class="hint">Unit & Status removed in Add. Unit is blank (editable later). Status auto.</p>
       <div class="modalRow">
-        <button class="actBtn ghost" onclick="closeAdd()">Cancel</button>
-        <button class="actBtn primary" onclick="saveAdd()">Add</button>
+        <button class="actBtn ghost" id="btnAddCancel">Cancel</button>
+        <button class="actBtn primary" id="btnAddSave">Add</button>
       </div>
     </div>
   </div>
 
-  <?!= include('backend/Scripts'); ?>
+  <?!= include("backend/Scripts"); ?>
 </body>
 </html>
