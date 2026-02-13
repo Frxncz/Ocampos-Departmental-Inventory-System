@@ -75,18 +75,28 @@
     $("invBody").innerHTML = "";
   }
 
+  
   function refreshItems(){
     if(!currentDept) return;
 
+    // ✅ show loading row inside the table
+    const body = $("invBody");
+    body.innerHTML = `<tr><td colspan="6" style="padding:14px;">Loading items...</td></tr>`;
+
     google.script.run
       .withSuccessHandler((res) => {
-        console.log("Items returned:", res);
         items = res || [];
+        $("itemsHint").textContent = "";
         renderItems();
       })
-      .withFailureHandler(err => alert("Failed to load items: " + (err?.message || err)))
+      .withFailureHandler(err => {
+        $("itemsHint").textContent = "";
+        alert("Failed to load items: " + (err?.message || err));
+        body.innerHTML = `<tr><td colspan="6" style="padding:14px;">Failed to load items.</td></tr>`;
+      })
       .getDepartmentItems(currentDept);
   }
+
 
 
   function renderItems(){
