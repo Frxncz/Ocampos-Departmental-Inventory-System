@@ -6,7 +6,7 @@ const LOW_STOCK_THRESHOLD = 10;
 
 /*************** WEB APP ***************/
 function doGet() {
-  return HtmlService.createTemplateFromFile("backend/Index")
+  return HtmlService.createTemplateFromFile("Index")
     .evaluate()
     .setTitle("Virtual Warehouse Pro")
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
